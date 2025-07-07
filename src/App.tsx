@@ -1,0 +1,181 @@
+import React, { useState, useEffect } from 'react';
+import FileExplorer from './components/FileExplorer';
+import CodeEditor from './components/CodeEditor';
+import AIPanel from './components/AIPanel';
+import TitleBar from './components/TitleBar';
+import { FileData, EmbeddingData } from './types';
+
+declare global {
+  interface Window {
+    electronAPI: {
+      selectFolder: () => Promise<string | null>;
+      readFile: (filePath: string) => Promise<string>;
+      writeFile: (filePath: string, content: string) => Promise<boolean>;
+      listFiles: (folderPath: string) => Promise<FileData[]>;
+      generateEmbeddings: (files: { path: string; content: string }[]) => Promise<EmbeddingData[]>;
+      generateCode: (prompt: string, relevantFiles: { path: string; content: string }[]) => Promise<string>;
+      cosineSimilarity: (vecA: number[], vecB: number[]) => number;
+    };
+  }
+}
+
+function App() {
+  const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [files, setFiles] = useState<FileData[]>([]);
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [fileContents, setFileContents] = useState<Record<string, string>>({});
+  const [embeddings, setEmbeddings] = useState<EmbeddingData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadProject = async (path: string) => {
+    try {
+      setIsLoading(true);
+      const projectFiles = await window.electronAPI.listFiles(path);
+      setFiles(projectFiles);
+      setProjectPath(path);
+      
+      // Load file contents
+      const contents: Record<string, string> = {};
+      for (const file of projectFiles) {
+        contents[file.path] = await window.electronAPI.readFile(file.path);
+      }
+      setFileContents(contents);
+      
+      // Try to generate embeddings (optional - won't fail the project load)
+      try {
+        const filesWithContent = projectFiles.map(file => ({
+          path: file.path,
+          content: contents[file.path]
+        }));
+        
+        const newEmbeddings = await window.electronAPI.generateEmbeddings(filesWithContent);
+        setEmbeddings(newEmbeddings);
+      } catch (embeddingError) {
+        console.warn('Embeddings generation failed (this is normal if OpenAI quota is exceeded):', embeddingError);
+        // Don't fail the project load - embeddings are optional
+        setEmbeddings([]);
+      }
+      
+    } catch (error) {
+      console.error('Error loading project:', error);
+      alert('Failed to load project');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectProject = async () => {
+    const path = await window.electronAPI.selectFolder();
+    if (path) {
+      await loadProject(path);
+    }
+  };
+
+  const handleFileSelect = async (file: FileData) => {
+    setSelectedFile(file);
+  };
+
+  const handleFileSave = async (filePath: string, content: string) => {
+    try {
+      await window.electronAPI.writeFile(filePath, content);
+      setFileContents(prev => ({ ...prev, [filePath]: content }));
+      
+      // Try to update embeddings for this file (optional)
+      try {
+        const newEmbeddings = await window.electronAPI.generateEmbeddings([{ path: filePath, content }]);
+        setEmbeddings(prev => {
+          const filtered = prev.filter(e => e.file !== filePath);
+          return [...filtered, ...newEmbeddings];
+        });
+      } catch (embeddingError) {
+        console.warn('Failed to update embeddings (this is normal if OpenAI quota is exceeded):', embeddingError);
+        // Don't fail the file save - embeddings are optional
+      }
+    } catch (error) {
+      console.error('Error saving file:', error);
+      alert('Failed to save file');
+    }
+  };
+
+  const findRelevantFiles = (prompt: string): { path: string; content: string }[] => {
+    // Simple keyword matching for now - in a real app, you'd use the embeddings
+    const relevantFiles = files.filter(file => {
+      const content = fileContents[file.path] || '';
+      const keywords = prompt.toLowerCase().split(' ');
+      return keywords.some(keyword => 
+        content.toLowerCase().includes(keyword) ||
+        file.name.toLowerCase().includes(keyword)
+      );
+    });
+    
+    return relevantFiles.slice(0, 3).map(file => ({
+      path: file.path,
+      content: fileContents[file.path] || ''
+    }));
+  };
+
+  if (!projectPath) {
+    return (
+      <div className="h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-white mb-8">Roblox AI Editor</h1>
+          <button
+            onClick={handleSelectProject}
+            className="bg-roblox-blue hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Select Roblox Project Folder
+          </button>
+          <p className="text-gray-400 mt-4">
+            Choose a folder containing your .lua files
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-dark-bg flex flex-col">
+      {/* Title Bar */}
+      <TitleBar projectPath={projectPath} onSelectProject={handleSelectProject} />
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* File Explorer */}
+        <div className="w-64 bg-panel-bg border-r border-border-color">
+          <FileExplorer
+            files={files}
+            selectedFile={selectedFile}
+            onFileSelect={handleFileSelect}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Code Editor */}
+        <div className="flex-1 flex flex-col">
+          {selectedFile ? (
+            <CodeEditor
+              file={selectedFile}
+              content={fileContents[selectedFile.path] || ''}
+              onSave={handleFileSave}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400">
+              Select a file to start editing
+            </div>
+          )}
+        </div>
+
+        {/* AI Panel */}
+        <div className="w-80 bg-panel-bg border-l border-border-color">
+          <AIPanel
+            onGenerateCode={findRelevantFiles}
+            selectedFile={selectedFile}
+            fileContent={selectedFile ? fileContents[selectedFile.path] : ''}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App; 
