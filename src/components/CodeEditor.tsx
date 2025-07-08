@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { FileData } from '../types';
 import { Save, X } from 'lucide-react';
@@ -12,6 +12,12 @@ interface CodeEditorProps {
 const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
   const [editorContent, setEditorContent] = useState(content);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Update editor content when switching files
+  useEffect(() => {
+    setEditorContent(content);
+    setIsDirty(false);
+  }, [file.path, content]);
 
   const handleEditorChange = (value: string | undefined) => {
     const newContent = value || '';
@@ -60,6 +66,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
       {/* Monaco Editor */}
       <div className="flex-1">
         <Editor
+          key={file.path} // Force re-render when file changes
           height="100%"
           defaultLanguage="lua"
           value={editorContent}
@@ -67,7 +74,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
           onMount={handleEditorDidMount}
           theme="vs-dark"
           options={{
-            minimap: { enabled: true },
             fontSize: 14,
             fontFamily: 'Consolas, Monaco, Courier New, monospace',
             lineNumbers: 'on',
@@ -89,13 +95,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
             hover: {
               enabled: true
             },
-            contextmenu: true,
-            quickSuggestions: {
-              other: true,
-              comments: false,
-              strings: true
-            }
-          }}
+            contextmenu: true
+          } as any}
         />
       </div>
     </div>

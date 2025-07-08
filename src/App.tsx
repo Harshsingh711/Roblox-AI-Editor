@@ -3,6 +3,7 @@ import FileExplorer from './components/FileExplorer';
 import CodeEditor from './components/CodeEditor';
 import AIPanel from './components/AIPanel';
 import TitleBar from './components/TitleBar';
+import TabBar from './components/TabBar';
 import { FileData, EmbeddingData } from './types';
 
 declare global {
@@ -22,7 +23,8 @@ declare global {
 function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [files, setFiles] = useState<FileData[]>([]);
-  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [openFiles, setOpenFiles] = useState<FileData[]>([]);
+  const [activeFile, setActiveFile] = useState<FileData | null>(null);
   const [fileContents, setFileContents] = useState<Record<string, string>>({});
   const [embeddings, setEmbeddings] = useState<EmbeddingData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +74,29 @@ function App() {
   };
 
   const handleFileSelect = async (file: FileData) => {
-    setSelectedFile(file);
+    // Add file to open files if not already open
+    if (!openFiles.find(f => f.path === file.path)) {
+      setOpenFiles(prev => [...prev, file]);
+    }
+    setActiveFile(file);
+  };
+
+  const handleTabSelect = (file: FileData) => {
+    setActiveFile(file);
+  };
+
+  const handleTabClose = (file: FileData) => {
+    setOpenFiles(prev => prev.filter(f => f.path !== file.path));
+    
+    // If we're closing the active file, switch to another open file
+    if (activeFile?.path === file.path) {
+      const remainingFiles = openFiles.filter(f => f.path !== file.path);
+      if (remainingFiles.length > 0) {
+        setActiveFile(remainingFiles[remainingFiles.length - 1]); // Switch to last tab
+      } else {
+        setActiveFile(null);
+      }
+    }
   };
 
   const handleFileSave = async (filePath: string, content: string) => {
@@ -144,7 +168,7 @@ function App() {
         <div className="w-64 bg-panel-bg border-r border-border-color">
           <FileExplorer
             files={files}
-            selectedFile={selectedFile}
+            selectedFile={activeFile}
             onFileSelect={handleFileSelect}
             isLoading={isLoading}
           />
@@ -152,10 +176,19 @@ function App() {
 
         {/* Code Editor */}
         <div className="flex-1 flex flex-col">
-          {selectedFile ? (
+          {/* Tab Bar */}
+          <TabBar
+            openFiles={openFiles}
+            activeFile={activeFile}
+            onTabSelect={handleTabSelect}
+            onTabClose={handleTabClose}
+          />
+          
+          {/* Editor Area */}
+          {activeFile ? (
             <CodeEditor
-              file={selectedFile}
-              content={fileContents[selectedFile.path] || ''}
+              file={activeFile}
+              content={fileContents[activeFile.path] || ''}
               onSave={handleFileSave}
             />
           ) : (
@@ -169,8 +202,8 @@ function App() {
         <div className="w-80 bg-panel-bg border-l border-border-color">
           <AIPanel
             onGenerateCode={findRelevantFiles}
-            selectedFile={selectedFile}
-            fileContent={selectedFile ? fileContents[selectedFile.path] : ''}
+            selectedFile={activeFile}
+            fileContent={activeFile ? fileContents[activeFile.path] : ''}
           />
         </div>
       </div>
