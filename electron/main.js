@@ -3,14 +3,21 @@ const path = require('path');
 const fs = require('fs').promises;
 const OpenAI = require('openai');
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 let mainWindow;
 let openai;
 
 // Initialize OpenAI client
 function initializeOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
+  console.log('API Key found:', apiKey ? 'Yes' : 'No');
   if (apiKey) {
     openai = new OpenAI({ apiKey });
+    console.log('OpenAI client initialized successfully');
+  } else {
+    console.log('No OpenAI API key found in environment variables');
   }
 }
 
@@ -167,14 +174,14 @@ When generating code:
 3. Include helpful comments
 4. Consider performance and security
 5. Provide complete, working code snippets
-6. If suggesting changes to existing code, provide clear diffs or complete file replacements
+6. If suggesting changes to existing code, always return the full, updated file content for the relevant file, and nothing else (no explanations, no diffs, just the code).
 
 Current project context:
 ${context}
 
 User request: ${prompt}
 
-Please provide a helpful response with code examples, explanations, or suggestions.`;
+Please return ONLY the full, updated file content for the relevant file, and nothing else.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Using gpt-4o-mini which is more accessible

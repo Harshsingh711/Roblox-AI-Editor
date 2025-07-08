@@ -5,6 +5,7 @@ import AIPanel from './components/AIPanel';
 import TitleBar from './components/TitleBar';
 import TabBar from './components/TabBar';
 import { FileData, EmbeddingData } from './types';
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 
 declare global {
   interface Window {
@@ -121,6 +122,11 @@ function App() {
     }
   };
 
+  // Update file content in state
+  const updateFileContent = (filePath: string, content: string) => {
+    setFileContents(prev => ({ ...prev, [filePath]: content }));
+  };
+
   const findRelevantFiles = (prompt: string): { path: string; content: string }[] => {
     // Simple keyword matching for now - in a real app, you'd use the embeddings
     const relevantFiles = files.filter(file => {
@@ -162,20 +168,21 @@ function App() {
       {/* Title Bar */}
       <TitleBar projectPath={projectPath} onSelectProject={handleSelectProject} />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* File Explorer */}
-        <div className="w-64 bg-panel-bg border-r border-border-color">
+      {/* Main Content with resizable panels */}
+      <PanelGroup direction="horizontal">
+        {/* File Explorer Panel */}
+        <Panel defaultSize={18} minSize={10} maxSize={40} className="!overflow-hidden">
           <FileExplorer
             files={files}
             selectedFile={activeFile}
             onFileSelect={handleFileSelect}
             isLoading={isLoading}
           />
-        </div>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-border-color cursor-col-resize" />
 
-        {/* Code Editor */}
-        <div className="flex-1 flex flex-col">
+        {/* Editor Panel */}
+        <Panel defaultSize={64} minSize={20} className="flex flex-col !overflow-hidden">
           {/* Tab Bar */}
           <TabBar
             openFiles={openFiles}
@@ -183,7 +190,6 @@ function App() {
             onTabSelect={handleTabSelect}
             onTabClose={handleTabClose}
           />
-          
           {/* Editor Area */}
           {activeFile ? (
             <CodeEditor
@@ -196,17 +202,19 @@ function App() {
               Select a file to start editing
             </div>
           )}
-        </div>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-border-color cursor-col-resize" />
 
         {/* AI Panel */}
-        <div className="w-80 bg-panel-bg border-l border-border-color">
+        <Panel defaultSize={18} minSize={12} maxSize={40} className="!overflow-hidden">
           <AIPanel
             onGenerateCode={findRelevantFiles}
             selectedFile={activeFile}
             fileContent={activeFile ? fileContents[activeFile.path] : ''}
+            updateFileContent={updateFileContent}
           />
-        </div>
-      </div>
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

@@ -6,13 +6,15 @@ interface AIPanelProps {
   onGenerateCode: (prompt: string) => { path: string; content: string }[];
   selectedFile: FileData | null;
   fileContent: string;
+  updateFileContent: (filePath: string, content: string) => void;
 }
 
-const AIPanel: React.FC<AIPanelProps> = ({ onGenerateCode, selectedFile, fileContent }) => {
+const AIPanel: React.FC<AIPanelProps> = ({ onGenerateCode, selectedFile, fileContent, updateFileContent }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(false);
 
   const handleSubmit = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -47,6 +49,30 @@ const AIPanel: React.FC<AIPanelProps> = ({ onGenerateCode, selectedFile, fileCon
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
+    }
+  };
+
+  const handleApply = async () => {
+    if (!selectedFile || !generatedCode) return;
+    try {
+      // Extract only the code block if present
+      let code = generatedCode.trim();
+      const codeBlockMatch = code.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        code = codeBlockMatch[1].trim();
+      } else if (code.startsWith('```')) {
+        code = code.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+      }
+      await window.electronAPI.writeFile(selectedFile.path, code);
+      setApplySuccess(true);
+      setTimeout(() => setApplySuccess(false), 2000);
+      // Reload the file content in the editor
+      const newContent = await window.electronAPI.readFile(selectedFile.path);
+      updateFileContent(selectedFile.path, newContent);
+      console.log('File successfully written:', selectedFile.path);
+    } catch (error) {
+      alert('Failed to apply code to file.');
+      console.error('Failed to write file:', error);
     }
   };
 
@@ -118,7 +144,7 @@ const AIPanel: React.FC<AIPanelProps> = ({ onGenerateCode, selectedFile, fileCon
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto p-3 min-h-0">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-6 h-6 animate-spin text-roblox-blue" />
@@ -126,9 +152,19 @@ const AIPanel: React.FC<AIPanelProps> = ({ onGenerateCode, selectedFile, fileCon
             </div>
           ) : generatedCode ? (
             <div className="bg-darker-bg border border-border-color rounded p-3">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono max-h-72 overflow-y-auto">
                 {generatedCode}
               </pre>
+              <button
+                onClick={handleApply}
+                className="mt-3 px-4 py-2 bg-roblox-green hover:bg-green-600 text-white text-xs rounded transition-colors"
+                disabled={!selectedFile}
+              >
+                Apply to file
+              </button>
+              {applySuccess && (
+                <span className="ml-3 text-green-400 text-xs">Applied!</span>
+              )}
             </div>
           ) : (
             <div className="text-center text-gray-400 text-sm">

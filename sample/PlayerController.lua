@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local PlayerController = {}
 PlayerController.__index = PlayerController
@@ -11,7 +12,8 @@ PlayerController.__index = PlayerController
 -- Configuration
 local WALK_SPEED = 16
 local RUN_SPEED = 24
-local JUMP_POWER = 50
+local JUMP_POWER = 200 -- Set jump power to 200
+local MOON_GRAVITY = 32 -- Set to a lower value to mimic Moon's gravity (1/6th of Earth's ~196.2)
 
 function PlayerController.new(player)
     local self = setmetatable({}, PlayerController)
@@ -74,14 +76,14 @@ end
 
 function PlayerController:jump()
     if self.humanoid.FloorMaterial ~= Enum.Material.Air then
-        self.humanoid.JumpPower = JUMP_POWER
+        self.humanoid.JumpPower = JUMP_POWER -- Set jump power to 200
         self.humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         self.isJumping = true
         
         -- Reset jump power after jump
         spawn(function()
             wait(0.1)
-            self.humanoid.JumpPower = 50
+            self.humanoid.JumpPower = JUMP_POWER -- Maintain jump power
         end)
     end
 end
@@ -90,7 +92,7 @@ function PlayerController:resetState()
     self.isRunning = false
     self.isJumping = false
     self.humanoid.WalkSpeed = WALK_SPEED
-    self.humanoid.JumpPower = 50
+    self.humanoid.JumpPower = JUMP_POWER -- Set to jump power of 200
 end
 
 function PlayerController:update()
@@ -100,6 +102,9 @@ function PlayerController:update()
         self.isJumping = false
     end
 end
+
+-- Set the Workspace gravity to mimic the Moon
+Workspace.Gravity = MOON_GRAVITY
 
 -- Initialize for all players
 Players.PlayerAdded:Connect(function(player)
@@ -111,4 +116,4 @@ for _, player in pairs(Players:GetPlayers()) do
     PlayerController.new(player)
 end
 
-return PlayerController 
+return PlayerController
