@@ -9,6 +9,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
   listFiles: (folderPath) => ipcRenderer.invoke('list-files', folderPath),
   
+  // New: list full directory tree
+  listDirectoryTree: (folderPath) => ipcRenderer.invoke('list-directory-tree', folderPath),
+  
+  // New file management operations
+  createFile: (filePath, content) => ipcRenderer.invoke('create-file', filePath, content),
+  deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath),
+  createDirectory: (dirPath) => ipcRenderer.invoke('create-directory', dirPath),
+  deleteDirectory: (dirPath) => ipcRenderer.invoke('delete-directory', dirPath),
+  fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
+  directoryExists: (dirPath) => ipcRenderer.invoke('directory-exists', dirPath),
+  applyFileOperations: (projectPath, operations) => ipcRenderer.invoke('apply-file-operations', projectPath, operations),
+  
   // AI operations
   generateEmbeddings: (files) => ipcRenderer.invoke('generate-embeddings', files),
   generateCode: (prompt, relevantFiles) => ipcRenderer.invoke('generate-code', prompt, relevantFiles),

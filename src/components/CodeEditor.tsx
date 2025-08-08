@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Editor from '@monaco-editor/react';
 import { FileData } from '../types';
-import { Save, X } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 interface CodeEditorProps {
   file: FileData;
@@ -9,9 +9,46 @@ interface CodeEditorProps {
   onSave: (filePath: string, content: string) => void;
 }
 
+const detectLanguage = (filename: string): string => {
+  if (!filename || typeof filename !== 'string') {
+    return 'plaintext';
+  }
+  
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'lua':
+    case 'luau':
+      return 'lua';
+    case 'ts':
+      return 'typescript';
+    case 'tsx':
+      return 'typescript';
+    case 'js':
+      return 'javascript';
+    case 'jsx':
+      return 'javascript';
+    case 'json':
+      return 'json';
+    case 'md':
+      return 'markdown';
+    case 'css':
+      return 'css';
+    case 'html':
+      return 'html';
+    case 'sh':
+      return 'shell';
+    case 'yml':
+    case 'yaml':
+      return 'yaml';
+    default:
+      return 'plaintext';
+  }
+};
+
 const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
   const [editorContent, setEditorContent] = useState(content);
   const [isDirty, setIsDirty] = useState(false);
+  const language = useMemo(() => detectLanguage(file.name), [file.name]);
 
   // Update editor content when switching files
   useEffect(() => {
@@ -31,7 +68,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
   };
 
   const handleEditorDidMount = (editor: any) => {
-    // Set up Lua language support
     editor.getModel()?.updateOptions({
       tabSize: 4,
       insertSpaces: true,
@@ -66,9 +102,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
       {/* Monaco Editor */}
       <div className="flex-1">
         <Editor
-          key={file.path} // Force re-render when file changes
+          key={file.path}
           height="100%"
-          defaultLanguage="lua"
+          defaultLanguage={language}
           value={editorContent}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}

@@ -1,0 +1,25 @@
+{
+  "name": "RojoProject",
+  "tree": {
+    "ServerScriptService": {
+      "$className": "Folder",
+      "$path": "ServerScriptService"
+    },
+    "ReplicatedStorage": {
+      "$className": "Folder",
+      "$path": "ReplicatedStorage"
+    },
+    "ReplicatedStorage/Remotes": {
+      "$className": "Folder",
+      "$path": "ReplicatedStorage.Remotes"
+    },
+    "StarterPlayer": {
+      "$className": "Folder",
+      "$path": "StarterPlayer"
+    },
+    "StarterPlayer/StarterPlayerScripts": {
+      "$className": "Folder",
+      "$path": "StarterPlayer.StarterPlayerScripts"
+    }
+  }
+}
