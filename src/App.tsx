@@ -179,16 +179,16 @@ function App() {
       return [];
     }
 
-    console.log('findRelevantFiles called with prompt:', prompt);
-    console.log('files array:', files);
-    console.log('fileContents:', fileContents);
+    // console.log('findRelevantFiles called with prompt:', prompt);
+    // console.log('files array:', files);
+    // console.log('fileContents:', fileContents);
 
     const relevantFiles = files.filter(file => {
       const content = fileContents[file.path] || '';
-      console.log(`Checking file ${file.path}, content length:`, content.length);
+      // console.log(`Checking file ${file.path}, content length:`, content.length);
       
       const keywords = prompt.toLowerCase().split(' ');
-      console.log('Keywords:', keywords);
+      // console.log('Keywords:', keywords);
       
       return keywords.some(keyword => 
         content.toLowerCase().includes(keyword) ||
@@ -196,7 +196,7 @@ function App() {
       );
     });
     
-    console.log('Relevant files found:', relevantFiles.length);
+    // console.log('Relevant files found:', relevantFiles.length);
     
     return relevantFiles.slice(0, 3).map(file => ({
       path: file.path,

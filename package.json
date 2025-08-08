@@ -12,7 +12,9 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "dist": "npm run build && electron-builder",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "lint": "echo \"No linting configured yet\" && exit 0"
   },
   "keywords": [
     "roblox",

@@ -39,7 +39,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
 
   // Parse AI response to determine if it's file operations or simple content
   const parseAIResponse = (response: string): AIResponse => {
-    console.log('Raw AI response:', response);
+            // console.log('Raw AI response:', response);
 
     // Try to extract JSON from a code block first
     const jsonBlockMatch = response.match(/```json\s*([\s\S]*?)```/i);
@@ -57,26 +57,26 @@ const AIPanel: React.FC<AIPanelProps> = ({
     if (jsonString) {
       try {
         const parsed = JSON.parse(jsonString);
-        console.log('Parsed JSON from code block:', parsed);
+        // console.log('Parsed JSON from code block:', parsed);
         if (parsed.operations && Array.isArray(parsed.operations)) {
-          console.log('Found file operations in code block:', parsed.operations);
+          // console.log('Found file operations in code block:', parsed.operations);
           return { operations: parsed.operations };
         }
       } catch (error) {
-        console.log('Failed to parse extracted JSON:', error);
+        // console.log('Failed to parse extracted JSON:', error);
       }
     }
 
     // Fallback: try to parse the whole response as JSON
     try {
       const parsed = JSON.parse(response);
-      console.log('Parsed JSON from full response:', parsed);
+      // console.log('Parsed JSON from full response:', parsed);
       if (parsed.operations && Array.isArray(parsed.operations)) {
-        console.log('Found file operations in full response:', parsed.operations);
+        // console.log('Found file operations in full response:', parsed.operations);
         return { operations: parsed.operations };
       }
     } catch (error) {
-      console.log('Not JSON, treating as simple content:', error);
+      // console.log('Not JSON, treating as simple content:', error);
       // Not JSON, treat as simple content
     }
 
@@ -131,16 +131,16 @@ const AIPanel: React.FC<AIPanelProps> = ({
       // Generate code using AI
       const result = await window.electronAPI.generateCode(prompt, relevantFiles);
       
-      console.log('=== RAW AI RESPONSE ===');
-      console.log(result);
-      console.log('=== END RAW AI RESPONSE ===');
+      // console.log('=== RAW AI RESPONSE ===');
+      // console.log(result);
+      // console.log('=== END RAW AI RESPONSE ===');
       
       // Parse the response
       const aiResponse = parseAIResponse(result);
-      console.log('Parsed AI response:', aiResponse);
+      // console.log('Parsed AI response:', aiResponse);
       
       if (aiResponse.operations && aiResponse.operations.length > 0) {
-        console.log('Setting file operations:', aiResponse.operations);
+        // console.log('Setting file operations:', aiResponse.operations);
         
         // Check for placeholder content
         const warnings: string[] = [];
@@ -161,7 +161,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
         setOperationPreviews(previews);
         setGeneratedCode('File operations generated. Review and apply below.');
       } else {
-        console.log('Setting generated code content');
+        // console.log('Setting generated code content');
         setGeneratedCode(aiResponse.content || '');
       }
     } catch (error) {
@@ -217,7 +217,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
         onRefreshProject();
       }
       
-      console.log('File successfully written:', selectedFile.path);
+              // console.log('File successfully written:', selectedFile.path);
     } catch (error) {
       alert('Failed to apply code to file.');
       console.error('Failed to write file:', error);
@@ -243,7 +243,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
         onRefreshProject();
       }
 
-      console.log('Operation applied successfully:', preview.operation);
+              // console.log('Operation applied successfully:', preview.operation);
     } catch (error) {
       alert('Failed to apply operation.');
       console.error('Failed to apply operation:', error);
