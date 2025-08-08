@@ -2,6 +2,31 @@
 
 A standalone AI-powered code editor for Roblox game development, built with Electron, React, and OpenAI's GPT-4o-mini.
 
+## 🚀 Download
+
+**Latest Version:** [v1.0.0](https://github.com/yourusername/roblox-ai-editor/releases/latest)
+
+### Quick Download
+- [**macOS** (.dmg)](https://github.com/yourusername/roblox-ai-editor/releases/download/v1.0.0/Roblox-AI-Editor-1.0.0.dmg) - Intel & Apple Silicon
+- [**Windows** (.exe)](https://github.com/yourusername/roblox-ai-editor/releases/download/v1.0.0/Roblox-AI-Editor-Setup-1.0.0.exe) - Windows 10/11
+- [**Linux** (.AppImage)](https://github.com/yourusername/roblox-ai-editor/releases/download/v1.0.0/Roblox-AI-Editor-1.0.0.AppImage) - Ubuntu, Debian, etc.
+
+### System Requirements
+- **macOS**: 10.14+ (Mojave or later)
+- **Windows**: Windows 10 or later
+- **Linux**: Ubuntu 18.04+, Debian 10+, or compatible
+- **RAM**: 4GB minimum, 8GB recommended
+- **Storage**: 500MB free space
+
+## ⚡ Quick Start
+
+1. **Download** the version for your platform above
+2. **Install** the application
+3. **Launch** Roblox AI Editor
+4. **Add your OpenAI API key** when prompted
+5. **Select your Roblox project folder**
+6. **Start coding!** 🎮
+
 ## Features
 
 - **File Explorer**: Browse and organize your Roblox Lua/Luau scripts
@@ -9,55 +34,8 @@ A standalone AI-powered code editor for Roblox game development, built with Elec
 - **AI Assistant**: Get intelligent code suggestions and help with your Roblox development
 - **Smart Context**: AI analyzes your project files to provide relevant suggestions
 - **Real-time Editing**: Edit and save files with automatic embedding updates
-
-## Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-- OpenAI API key
-
-## Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd roblox-ai-editor
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up OpenAI API key**
-   
-   Create a `.env` file in the root directory:
-   ```bash
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
-   
-   Or set it as an environment variable:
-   ```bash
-   export OPENAI_API_KEY=your_openai_api_key_here
-   ```
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Run the Electron app**
-   ```bash
-   npm run electron-dev
-   ```
-
-## Usage
-
-1. **Select Project**: Click "Select Roblox Project Folder" to choose a folder containing your `.lua` files
-2. **Browse Files**: Use the file explorer to navigate your project structure
-3. **Edit Code**: Open any `.lua` file to edit it in the Monaco editor
-4. **AI Assistance**: Use the AI panel to ask for help with your code
-5. **Save Changes**: Modified files show a save button - click it to persist changes
+- **Interactive File Tree**: VS Code-like sidebar with expand/collapse functionality
+- **Individual File Operations**: Preview and apply AI changes with granular control
 
 ## AI Features
 
@@ -67,62 +45,30 @@ The AI assistant can help with:
 - Fixing bugs and issues
 - Implementing Roblox-specific features
 - Code explanations and documentation
+- Multi-file operations and project restructuring
 
-## Project Structure
+## Setup
 
-```
-roblox-ai-editor/
-├── electron/           # Electron main process
-│   ├── main.js        # Main process entry point
-│   └── preload.js     # Preload script for IPC
-├── src/               # React frontend
-│   ├── components/    # React components
-│   ├── types.ts       # TypeScript type definitions
-│   ├── App.tsx        # Main app component
-│   ├── main.tsx       # React entry point
-│   └── index.css      # Global styles
-├── package.json       # Dependencies and scripts
-├── vite.config.ts     # Vite configuration
-├── tailwind.config.js # Tailwind CSS configuration
-└── README.md          # This file
-```
+### OpenAI API Key
+You'll need an OpenAI API key for AI features:
+1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Create a new API key
+3. Add it to the app when prompted
 
-## Development
+### First Launch
+1. Download and install the app
+2. Launch Roblox AI Editor
+3. Enter your OpenAI API key
+4. Select your Roblox project folder
+5. Start coding with AI assistance!
 
-### Available Scripts
+## Usage
 
-- `npm run dev` - Start Vite development server
-- `npm run electron-dev` - Start Electron with hot reload
-- `npm run build` - Build for production
-- `npm run dist` - Build and package the app
-
-### Architecture
-
-- **Electron**: Provides the desktop app shell and file system access
-- **React**: Frontend UI with TypeScript
-- **Monaco Editor**: Code editing with Lua support
-- **OpenAI API**: AI code generation and embeddings
-- **Tailwind CSS**: Styling with custom Roblox theme
-
-## Building for Distribution
-
-```bash
-npm run dist
-```
-
-This will create distributable packages for your platform in the `dist` folder.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
+1. **Select Project**: Click "Select Roblox Project Folder" to choose a folder containing your `.lua` files
+2. **Browse Files**: Use the file explorer to navigate your project structure
+3. **Edit Code**: Open any `.lua` file to edit it in the Monaco editor
+4. **AI Assistance**: Use the AI panel to ask for help with your code
+5. **Save Changes**: Modified files show a save button - click it to persist changes
 
 ## Troubleshooting
 
@@ -138,4 +84,8 @@ If you encounter issues:
 1. Check the console for error messages
 2. Verify your OpenAI API key is working
 3. Ensure your project folder contains `.lua` files
-4. Try restarting the application 
+4. Try restarting the application
+
+---
+
+**Made with ❤️ for the Roblox development community**
