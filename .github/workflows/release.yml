@@ -196,5 +196,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md
-          git commit -m "🚀 Update README with latest release download links" || exit 0
+          git commit -m "�� Update README with latest release download links" || exit 0
           git push
