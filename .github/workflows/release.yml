@@ -1,0 +1,200 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - os: macos-latest
+            platform: mac
+            artifact: Roblox AI Editor-*.dmg
+          - os: ubuntu-latest
+            platform: linux
+            artifact: Roblox AI Editor-*.AppImage
+          - os: windows-latest
+            platform: win
+            artifact: Roblox AI Editor Setup *.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: dist/${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+  update-readme:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get release info
+        id: release
+        run: |
+          RELEASE_URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.html_url')
+          echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
+          
+          # Get download links
+          MAC_URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.assets[] | select(.name | contains("dmg")) | .browser_download_url')
+          WIN_URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.assets[] | select(.name | contains("exe")) | .browser_download_url')
+          LINUX_URL=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.assets[] | select(.name | contains("AppImage")) | .browser_download_url')
+          
+          echo "mac_url=$MAC_URL" >> $GITHUB_OUTPUT
+          echo "win_url=$WIN_URL" >> $GITHUB_OUTPUT
+          echo "linux_url=$LINUX_URL" >> $GITHUB_OUTPUT
+
+      - name: Update README
+        run: |
+          # Create updated README content
+          cat > README_NEW.md << 'README_EOF'
+          # Roblox AI Editor
+
+          A standalone AI-powered code editor for Roblox game development, built with Electron, React, and OpenAI's GPT-4o-mini.
+
+          ## 🚀 Download
+
+          **Latest Version:** [v${{ github.ref_name }}](${{ steps.release.outputs.release_url }})
+
+          ### Quick Download
+          - [**macOS** (.dmg)](${{ steps.release.outputs.mac_url }}) - Intel & Apple Silicon
+          - [**Windows** (.exe)](${{ steps.release.outputs.win_url }}) - Windows 10/11
+          - [**Linux** (.AppImage)](${{ steps.release.outputs.linux_url }}) - Ubuntu, Debian, etc.
+
+          ### System Requirements
+          - **macOS**: 10.14+ (Mojave or later)
+          - **Windows**: Windows 10 or later
+          - **Linux**: Ubuntu 18.04+, Debian 10+, or compatible
+          - **RAM**: 4GB minimum, 8GB recommended
+          - **Storage**: 500MB free space
+
+          ## ⚡ Quick Start
+
+          1. **Download** the version for your platform above
+          2. **Install** the application
+          3. **Launch** Roblox AI Editor
+          4. **Add your OpenAI API key** when prompted
+          5. **Select your Roblox project folder**
+          6. **Start coding!** 🎮
+
+          ## Features
+
+          - **File Explorer**: Browse and organize your Roblox Lua/Luau scripts
+          - **Monaco Editor**: Full-featured code editor with Lua syntax highlighting
+          - **AI Assistant**: Get intelligent code suggestions and help with your Roblox development
+          - **Smart Context**: AI analyzes your project files to provide relevant suggestions
+          - **Real-time Editing**: Edit and save files with automatic embedding updates
+          - **Interactive File Tree**: VS Code-like sidebar with expand/collapse functionality
+          - **Individual File Operations**: Preview and apply AI changes with granular control
+
+          ## AI Features
+
+          The AI assistant can help with:
+          - Adding new game mechanics
+          - Optimizing existing code
+          - Fixing bugs and issues
+          - Implementing Roblox-specific features
+          - Code explanations and documentation
+          - Multi-file operations and project restructuring
+
+          ## Setup
+
+          ### OpenAI API Key
+          You'll need an OpenAI API key for AI features:
+          1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+          2. Create a new API key
+          3. Add it to the app when prompted
+
+          ### First Launch
+          1. Download and install the app
+          2. Launch Roblox AI Editor
+          3. Enter your OpenAI API key
+          4. Select your Roblox project folder
+          5. Start coding with AI assistance!
+
+          ## Usage
+
+          1. **Select Project**: Click "Select Roblox Project Folder" to choose a folder containing your `.lua` files
+          2. **Browse Files**: Use the file explorer to navigate your project structure
+          3. **Edit Code**: Open any `.lua` file to edit it in the Monaco editor
+          4. **AI Assistance**: Use the AI panel to ask for help with your code
+          5. **Save Changes**: Modified files show a save button - click it to persist changes
+
+          ## Troubleshooting
+
+          ### Common Issues
+
+          1. **OpenAI API errors**: Make sure your API key is set correctly and has sufficient credits
+          2. **File permission errors**: Ensure the app has permission to read/write to your project folder
+          3. **Monaco Editor not loading**: Check that all dependencies are installed correctly
+
+          ### Getting Help
+
+          If you encounter issues:
+          1. Check the console for error messages
+          2. Verify your OpenAI API key is working
+          3. Ensure your project folder contains `.lua` files
+          4. Try restarting the application
+
+          ---
+
+          **Made with ❤️ for the Roblox development community**
+          README_EOF
+
+          # Replace the old README
+          mv README_NEW.md README.md
+
+      - name: Commit and push README update
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md
+          git commit -m "�� Update README with latest release download links" || exit 0
+          git push
