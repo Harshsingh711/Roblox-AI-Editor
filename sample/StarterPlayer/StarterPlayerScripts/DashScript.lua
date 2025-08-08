@@ -7,7 +7,7 @@ local humanoidRootPart = character:WaitForChild('HumanoidRootPart')
 local dashCooldown = 4 -- Cooldown in seconds
 local canDash = true
 local jumpCount = 0
-local maxJumps = 2 -- Allow double jump
+local maxJumps = 3 -- Updated to allow three jumps
 
 -- Function to handle dashing
 local function dash()

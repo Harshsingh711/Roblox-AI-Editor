@@ -125,6 +125,36 @@ function App() {
     setFileContents(prev => ({ ...prev, [filePath]: content }));
   };
 
+  // Refresh project tree and file contents
+  const refreshProject = async () => {
+    if (!projectPath) return;
+    
+    try {
+      // Reload the tree
+      const tree = await window.electronAPI.listDirectoryTree(projectPath);
+      setFileTree(tree);
+      
+      // Reload .lua files for AI context
+      const projectFiles = await window.electronAPI.listFiles(projectPath);
+      setFiles(projectFiles);
+      
+      // Reload content for currently open files
+      const newFileContents: Record<string, string> = {};
+      for (const file of openFiles) {
+        try {
+          newFileContents[file.path] = await window.electronAPI.readFile(file.path);
+        } catch (error) {
+          console.warn(`Failed to reload file ${file.path}:`, error);
+          // Keep existing content if reload fails
+          newFileContents[file.path] = fileContents[file.path] || '';
+        }
+      }
+      setFileContents(prev => ({ ...prev, ...newFileContents }));
+    } catch (error) {
+      console.error('Error refreshing project:', error);
+    }
+  };
+
   // Handle file operations (create, modify, delete)
   const handleFileOperations = async (operations: FileOperation[]) => {
     try {
@@ -263,6 +293,7 @@ function App() {
             fileContent={activeFile ? (fileContents[activeFile.path] || '') : ''}
             updateFileContent={updateFileContent}
             onFileOperations={handleFileOperations}
+            onRefreshProject={refreshProject}
           />
         </Panel>
       </PanelGroup>

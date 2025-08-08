@@ -462,29 +462,30 @@ IMPORTANT: You can now create, modify, move/rename, and delete files to build co
 10. NEVER use absolute paths in the JSON operations, only relative paths from the project root.
 11. Avoid creating duplicate files unless the user explicitly requests it.
 
+CRITICAL: When modifying existing files, you MUST provide the COMPLETE updated file content, not just the changes or placeholder comments. The user expects the full, working code.
+
 RESPONSE FORMAT:
 Always respond in two parts:
 1. A brief, human-readable summary of what you are changing or adding.
 2. A code block labeled \`\`\`fileops containing a JSON object with all file operations (create, modify, move, delete) for all files involved.
 
-Example:
+Example for a simple modification:
 Here's a summary of the changes:
-- Added double jump to DashScript.lua
-- Updated jump logic to allow two jumps before landing
+- Updated jump count from 2 to 5 in DashScript.lua
 
 \`\`\`fileops
 {
   "operations": [
     {
       "type": "modify",
-      "path": "src/DashScript.lua",
-      "content": "-- updated script here"
+      "path": "StarterPlayer/StarterPlayerScripts/DashScript.lua",
+      "content": "local UserInputService = game:GetService(\"UserInputService\")\nlocal Players = game:GetService(\"Players\")\nlocal player = Players.LocalPlayer\nlocal character = player.Character or player.CharacterAdded:Wait()\nlocal humanoid = character:WaitForChild(\"Humanoid\")\nlocal rootPart = character:WaitForChild(\"HumanoidRootPart\")\n\nlocal jumpCount = 5  -- Updated from 2 to 5\nlocal currentJumps = 0\nlocal canJump = true\n\nlocal function resetJumps()\n    currentJumps = 0\n    canJump = true\nend\n\nlocal function onJump()\n    if canJump and currentJumps < jumpCount then\n        currentJumps = currentJumps + 1\n        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)\n        \n        if currentJumps >= jumpCount then\n            canJump = false\n        end\n    end\nend\n\nhumanoid.StateChanged:Connect(function(_, new)\n    if new == Enum.HumanoidStateType.Landed then\n        resetJumps()\n    end\nend)\n\nUserInputService.JumpRequest:Connect(onJump)"
     }
   ]
 }
 \`\`\`
 
-CRITICAL: The code block must be labeled \`\`\`fileops and contain only the JSON object. Do not include any other code or explanation inside the code block.
+CRITICAL: The code block must be labeled \`\`\`fileops and contain only the JSON object. Do not include any other code or explanation inside the code block. ALWAYS provide the complete, working file content in the "content" field, not placeholder comments.
 
 This format must be used for all user prompts that result in file changes, including single-file and multi-file operations, and for any feature, fix, or refactor. The summary should be human-readable and concise, and the code block must be machine-readable and complete.
 
@@ -493,7 +494,7 @@ ${context}
 
 User request: ${prompt}
 
-DECISION: If this is a simple modification to an existing file, return a summary and a fileops code block with a single modify operation. If this requires creating/modifying/moving/deleting multiple files or is a complete feature request, return a summary and a fileops code block with all necessary operations.`;
+DECISION: If this is a simple modification to an existing file, return a summary and a fileops code block with a single modify operation containing the COMPLETE updated file content. If this requires creating/modifying/moving/deleting multiple files or is a complete feature request, return a summary and a fileops code block with all necessary operations.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Using gpt-4o-mini which is more accessible

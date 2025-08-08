@@ -50,7 +50,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ file, content, onSave }) => {
   const [isDirty, setIsDirty] = useState(false);
   const language = useMemo(() => detectLanguage(file.name), [file.name]);
 
-  // Update editor content when switching files
+  // Update editor content when switching files or when content prop changes
   useEffect(() => {
     setEditorContent(content);
     setIsDirty(false);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileData, FileOperation, AIResponse } from '../types';
-import { Send, Bot, Loader2, Copy, Check, FilePlus, FileX, FileText } from 'lucide-react';
+import { Send, Bot, Loader2, Copy, Check, FilePlus, FileX, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface AIPanelProps {
   onGenerateCode: (prompt: string) => { path: string; content: string }[];
@@ -8,6 +8,14 @@ interface AIPanelProps {
   fileContent: string;
   updateFileContent: (filePath: string, content: string) => void;
   onFileOperations?: (operations: FileOperation[]) => Promise<boolean>;
+  onRefreshProject?: () => void; // New callback to refresh project tree
+}
+
+interface FileOperationPreview {
+  operation: FileOperation;
+  summary: string;
+  preview?: string;
+  applied: boolean;
 }
 
 const AIPanel: React.FC<AIPanelProps> = ({ 
@@ -15,15 +23,19 @@ const AIPanel: React.FC<AIPanelProps> = ({
   selectedFile, 
   fileContent, 
   updateFileContent,
-  onFileOperations 
+  onFileOperations,
+  onRefreshProject
 }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [fileOperations, setFileOperations] = useState<FileOperation[]>([]);
+  const [operationPreviews, setOperationPreviews] = useState<FileOperationPreview[]>([]);
   const [copied, setCopied] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [operationsSuccess, setOperationsSuccess] = useState(false);
+  const [expandedOperations, setExpandedOperations] = useState<Set<number>>(new Set());
+  const [placeholderWarnings, setPlaceholderWarnings] = useState<string[]>([]);
 
   // Parse AI response to determine if it's file operations or simple content
   const parseAIResponse = (response: string): AIResponse => {
@@ -71,6 +83,38 @@ const AIPanel: React.FC<AIPanelProps> = ({
     return { content: response };
   };
 
+  // Generate previews for file operations
+  const generateOperationPreviews = (operations: FileOperation[]): FileOperationPreview[] => {
+    return operations.map((op) => {
+      let summary = '';
+      let preview = '';
+
+      switch (op.type) {
+        case 'create':
+          summary = `Create new file: ${op.path}`;
+          preview = op.content || '';
+          break;
+        case 'modify':
+          summary = `Update file: ${op.path}`;
+          preview = op.content || '';
+          break;
+        case 'delete':
+          summary = `Delete file: ${op.path}`;
+          break;
+        case 'move':
+          summary = `Move file: ${op.from} → ${op.to}`;
+          break;
+      }
+
+      return {
+        operation: op,
+        summary,
+        preview,
+        applied: false
+      };
+    });
+  };
+
   const handleSubmit = async () => {
     if (!prompt.trim() || isGenerating) return;
 
@@ -78,6 +122,8 @@ const AIPanel: React.FC<AIPanelProps> = ({
       setIsGenerating(true);
       setGeneratedCode('');
       setFileOperations([]);
+      setOperationPreviews([]);
+      setPlaceholderWarnings([]);
 
       // Find relevant files based on prompt
       const relevantFiles = onGenerateCode(prompt);
@@ -85,13 +131,34 @@ const AIPanel: React.FC<AIPanelProps> = ({
       // Generate code using AI
       const result = await window.electronAPI.generateCode(prompt, relevantFiles);
       
+      console.log('=== RAW AI RESPONSE ===');
+      console.log(result);
+      console.log('=== END RAW AI RESPONSE ===');
+      
       // Parse the response
       const aiResponse = parseAIResponse(result);
       console.log('Parsed AI response:', aiResponse);
       
       if (aiResponse.operations && aiResponse.operations.length > 0) {
         console.log('Setting file operations:', aiResponse.operations);
+        
+        // Check for placeholder content
+        const warnings: string[] = [];
+        aiResponse.operations.forEach((op, index) => {
+          if (op.type === 'modify' || op.type === 'create') {
+            const content = (op as any).content;
+            if (content && (content.includes('-- updated script here') || content.includes('placeholder') || content.length < 50)) {
+              const warning = `⚠️ Operation ${index + 1} may contain placeholder content`;
+              console.warn(warning, content.substring(0, 100));
+              warnings.push(warning);
+            }
+          }
+        });
+        setPlaceholderWarnings(warnings);
+        
         setFileOperations(aiResponse.operations);
+        const previews = generateOperationPreviews(aiResponse.operations);
+        setOperationPreviews(previews);
         setGeneratedCode('File operations generated. Review and apply below.');
       } else {
         console.log('Setting generated code content');
@@ -125,7 +192,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
     
     // Prevent applying to file when file operations are present
     if (fileOperations.length > 0) {
-      alert('⚠️ File operations are pending. Please use "Apply All File Operations" instead of "Apply to file".');
+      alert('⚠️ File operations are pending. Please use individual apply buttons below.');
       return;
     }
     
@@ -141,9 +208,15 @@ const AIPanel: React.FC<AIPanelProps> = ({
       await window.electronAPI.writeFile(selectedFile.path, code);
       setApplySuccess(true);
       setTimeout(() => setApplySuccess(false), 2000);
-      // Reload the file content in the editor
-      const newContent = await window.electronAPI.readFile(selectedFile.path);
-      updateFileContent(selectedFile.path, newContent);
+      
+      // Update the file content in the parent component
+      updateFileContent(selectedFile.path, code);
+      
+      // Refresh project tree if callback provided
+      if (onRefreshProject) {
+        onRefreshProject();
+      }
+      
       console.log('File successfully written:', selectedFile.path);
     } catch (error) {
       alert('Failed to apply code to file.');
@@ -151,7 +224,33 @@ const AIPanel: React.FC<AIPanelProps> = ({
     }
   };
 
-  const handleApplyOperations = async () => {
+  const handleApplySingleOperation = async (index: number) => {
+    if (!onFileOperations) return;
+
+    const preview = operationPreviews[index];
+    if (!preview || preview.applied) return;
+
+    try {
+      await onFileOperations([preview.operation]);
+      
+      // Mark as applied
+      setOperationPreviews(prev => prev.map((p, i) => 
+        i === index ? { ...p, applied: true } : p
+      ));
+
+      // Refresh project tree if callback provided
+      if (onRefreshProject) {
+        onRefreshProject();
+      }
+
+      console.log('Operation applied successfully:', preview.operation);
+    } catch (error) {
+      alert('Failed to apply operation.');
+      console.error('Failed to apply operation:', error);
+    }
+  };
+
+  const handleApplyAllOperations = async () => {
     if (!onFileOperations || fileOperations.length === 0) return;
 
     // Compatibility: normalize move operations with oldPath/newPath to from/to
@@ -183,11 +282,29 @@ const AIPanel: React.FC<AIPanelProps> = ({
       setOperationsSuccess(true);
       setTimeout(() => setOperationsSuccess(false), 2000);
       setFileOperations([]);
+      setOperationPreviews([]);
       setGeneratedCode('');
+      
+      // Refresh project tree if callback provided
+      if (onRefreshProject) {
+        onRefreshProject();
+      }
     } catch (error) {
       alert('Failed to apply file operations.');
       console.error('Failed to apply operations:', error);
     }
+  };
+
+  const toggleOperationExpansion = (index: number) => {
+    setExpandedOperations(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   const getOperationIcon = (type: string) => {
@@ -278,52 +395,106 @@ const AIPanel: React.FC<AIPanelProps> = ({
               <span className="ml-2 text-gray-400">Generating code...</span>
             </div>
           ) : generatedCode ? (
-            <div className="bg-darker-bg border border-border-color rounded p-3">
+            <div className="bg-darker-bg border border-border-color rounded p-3 h-full flex flex-col">
               {fileOperations.length > 0 ? (
-                <div>
+                <div className="flex-1 flex flex-col min-h-0">
                   <div className="mb-3 p-2 bg-blue-900 bg-opacity-30 border border-blue-500 rounded text-xs text-blue-200">
-                    ⚠️ Multiple files need to be created/modified. Use "Apply All File Operations" below.
+                    ⚠️ Multiple files need to be created/modified. Review each operation below.
                   </div>
+                  
+                  {placeholderWarnings.length > 0 && (
+                    <div className="mb-3 p-2 bg-yellow-900 bg-opacity-30 border border-yellow-500 rounded text-xs text-yellow-200">
+                      <div className="font-medium mb-1">⚠️ Warning: Potential placeholder content detected</div>
+                      {placeholderWarnings.map((warning, index) => (
+                        <div key={index} className="text-yellow-300">{warning}</div>
+                      ))}
+                      <div className="mt-1 text-yellow-400">Please review the content before applying.</div>
+                    </div>
+                  )}
+                  
                   <h4 className="text-sm font-medium text-white mb-3">File Operations:</h4>
-                  <div className="space-y-2 mb-3">
-                    {fileOperations.map((op, index) => (
-                      <div key={index} className="flex items-center text-xs text-gray-300 bg-dark-bg p-2 rounded">
-                        {getOperationIcon(op.type)}
-                        <span className="ml-2 font-mono">
-                          {op.type === 'move' ? `${op.from} → ${op.to}` : (op as any).path}
-                        </span>
-                        <span className="ml-auto text-gray-500">{op.type}</span>
+                  <div className="space-y-2 mb-3 flex-1 overflow-y-auto min-h-0">
+                    {operationPreviews.map((preview, index) => (
+                      <div key={index} className="border border-border-color rounded p-3">
+                        <div className="flex flex-col space-y-2">
+                          {/* Header row with operation info and controls */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                              {getOperationIcon(preview.operation.type)}
+                              <span className="text-sm font-medium text-white truncate">{preview.summary}</span>
+                              {preview.applied && (
+                                <span className="text-xs text-green-400 flex-shrink-0">✓ Applied</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              <button
+                                onClick={() => toggleOperationExpansion(index)}
+                                className="text-gray-400 hover:text-white transition-colors p-1"
+                                title={expandedOperations.has(index) ? "Collapse" : "Expand"}
+                              >
+                                {expandedOperations.has(index) ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
+                              </button>
+                              {!preview.applied && (
+                                <button
+                                  onClick={() => handleApplySingleOperation(index)}
+                                  className="px-2 py-1 bg-roblox-blue hover:bg-blue-600 text-white text-xs rounded transition-colors whitespace-nowrap"
+                                  title="Apply this operation"
+                                >
+                                  Apply
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Expandable preview content */}
+                          {expandedOperations.has(index) && preview.preview && (
+                            <div className="mt-2 p-2 bg-dark-bg rounded text-xs">
+                              <div className="text-gray-400 mb-1">Preview:</div>
+                              <pre className="text-gray-300 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto text-xs">
+                                {preview.preview}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={handleApplyOperations}
-                    className="w-full px-4 py-2 bg-roblox-green hover:bg-green-600 text-white text-sm rounded transition-colors"
-                    disabled={!onFileOperations || fileOperations.length === 0}
-                  >
-                    Apply All File Operations
-                  </button>
-                  {operationsSuccess && (
-                    <div className="mt-2 text-green-400 text-xs text-center">✓ Operations applied successfully!</div>
-                  )}
+                  <div className="mt-auto pt-3 border-t border-border-color">
+                    <button
+                      onClick={handleApplyAllOperations}
+                      className="w-full px-4 py-2 bg-roblox-green hover:bg-green-600 text-white text-sm rounded transition-colors"
+                      disabled={!onFileOperations || fileOperations.length === 0}
+                    >
+                      Apply All Operations
+                    </button>
+                    {operationsSuccess && (
+                      <div className="mt-2 text-green-400 text-xs text-center">✓ All operations applied successfully!</div>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div>
-                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono max-h-72 overflow-y-auto">
+                <div className="flex-1 flex flex-col">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono flex-1 overflow-y-auto">
                     {generatedCode}
                   </pre>
-                  {selectedFile && (
-                    <button
-                      onClick={handleApply}
-                      className="mt-3 px-4 py-2 bg-roblox-blue hover:bg-blue-600 text-white text-xs rounded transition-colors"
-                      disabled={!selectedFile}
-                    >
-                      Apply to file
-                    </button>
-                  )}
-                  {applySuccess && (
-                    <span className="ml-3 text-green-400 text-xs">Applied!</span>
-                  )}
+                  <div className="mt-3 pt-3 border-t border-border-color">
+                    {selectedFile && (
+                      <button
+                        onClick={handleApply}
+                        className="px-4 py-2 bg-roblox-blue hover:bg-blue-600 text-white text-xs rounded transition-colors"
+                        disabled={!selectedFile}
+                      >
+                        Apply to file
+                      </button>
+                    )}
+                    {applySuccess && (
+                      <span className="ml-3 text-green-400 text-xs">Applied!</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
