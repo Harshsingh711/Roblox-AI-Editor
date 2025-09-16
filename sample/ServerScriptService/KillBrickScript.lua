@@ -1,18 +1,12 @@
--- KillBrickScript.lua
-
-local KillBrick = script.Parent
-
--- Function to handle player contact
-local function onTouch(other)
-    local player = game.Players:GetPlayerFromCharacter(other)
+local function onTouch(hit)
+    local player = game.Players:GetPlayerFromCharacter(hit.Parent)
     if player then
-        local character = player.Character
-        if character and character:FindFirstChild('Humanoid') then
-            local humanoid = character.Humanoid
-            humanoid.Health = math.max(humanoid.Health - 25, 0) -- Reduce health by 25, but not below 0
+        local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local currentHealth = humanoid.Health
+            humanoid.Health = math.max(currentHealth - 25, 0)  -- Decrease health by 25 points
         end
     end
 end
 
--- Connect the onTouch function to the Touched event
-KillBrick.Touched:Connect(onTouch)
+script.Parent.Touched:Connect(onTouch)

@@ -469,6 +469,10 @@ Always respond in two parts:
 1. A brief, human-readable summary of what you are changing or adding.
 2. A code block labeled \`\`\`fileops containing a JSON object with all file operations (create, modify, move, delete) for all files involved.
 
+The JSON object should include:
+- "operations": Array of file operations
+- "description": A detailed explanation of what changes were made and how the developer can use them (2-3 sentences explaining the functionality, usage instructions, and any important notes)
+
 Example for a simple modification:
 Here's a summary of the changes:
 - Updated jump count from 2 to 5 in DashScript.lua
@@ -481,7 +485,8 @@ Here's a summary of the changes:
       "path": "StarterPlayer/StarterPlayerScripts/DashScript.lua",
       "content": "local UserInputService = game:GetService(\"UserInputService\")\nlocal Players = game:GetService(\"Players\")\nlocal player = Players.LocalPlayer\nlocal character = player.Character or player.CharacterAdded:Wait()\nlocal humanoid = character:WaitForChild(\"Humanoid\")\nlocal rootPart = character:WaitForChild(\"HumanoidRootPart\")\n\nlocal jumpCount = 5  -- Updated from 2 to 5\nlocal currentJumps = 0\nlocal canJump = true\n\nlocal function resetJumps()\n    currentJumps = 0\n    canJump = true\nend\n\nlocal function onJump()\n    if canJump and currentJumps < jumpCount then\n        currentJumps = currentJumps + 1\n        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)\n        \n        if currentJumps >= jumpCount then\n            canJump = false\n        end\n    end\nend\n\nhumanoid.StateChanged:Connect(function(_, new)\n    if new == Enum.HumanoidStateType.Landed then\n        resetJumps()\n    end\nend)\n\nUserInputService.JumpRequest:Connect(onJump)"
     }
-  ]
+  ],
+  "description": "Updated the dash script to allow players to jump up to 5 times instead of 2. Players can now perform multiple jumps in mid-air, with the jump count resetting when they land. This creates a more dynamic movement system that allows for better platforming and aerial combat mechanics."
 }
 \`\`\`
 

@@ -36,6 +36,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
   const [operationsSuccess, setOperationsSuccess] = useState(false);
   const [expandedOperations, setExpandedOperations] = useState<Set<number>>(new Set());
   const [placeholderWarnings, setPlaceholderWarnings] = useState<string[]>([]);
+  const [changeDescription, setChangeDescription] = useState<string>('');
 
   // Parse AI response to determine if it's file operations or simple content
   const parseAIResponse = (response: string): AIResponse => {
@@ -60,7 +61,10 @@ const AIPanel: React.FC<AIPanelProps> = ({
         // console.log('Parsed JSON from code block:', parsed);
         if (parsed.operations && Array.isArray(parsed.operations)) {
           // console.log('Found file operations in code block:', parsed.operations);
-          return { operations: parsed.operations };
+          return { 
+            operations: parsed.operations,
+            description: parsed.description || ''
+          };
         }
       } catch (error) {
         // console.log('Failed to parse extracted JSON:', error);
@@ -73,7 +77,10 @@ const AIPanel: React.FC<AIPanelProps> = ({
       // console.log('Parsed JSON from full response:', parsed);
       if (parsed.operations && Array.isArray(parsed.operations)) {
         // console.log('Found file operations in full response:', parsed.operations);
-        return { operations: parsed.operations };
+        return { 
+          operations: parsed.operations,
+          description: parsed.description || ''
+        };
       }
     } catch (error) {
       // console.log('Not JSON, treating as simple content:', error);
@@ -124,6 +131,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
       setFileOperations([]);
       setOperationPreviews([]);
       setPlaceholderWarnings([]);
+      setChangeDescription('');
 
       // Find relevant files based on prompt
       const relevantFiles = onGenerateCode(prompt);
@@ -141,6 +149,7 @@ const AIPanel: React.FC<AIPanelProps> = ({
       
       if (aiResponse.operations && aiResponse.operations.length > 0) {
         // console.log('Setting file operations:', aiResponse.operations);
+        setChangeDescription(aiResponse.description || '');
         
         // Check for placeholder content
         const warnings: string[] = [];
@@ -281,9 +290,9 @@ const AIPanel: React.FC<AIPanelProps> = ({
       await onFileOperations(validOperations);
       setOperationsSuccess(true);
       setTimeout(() => setOperationsSuccess(false), 2000);
-      setFileOperations([]);
-      setOperationPreviews([]);
-      setGeneratedCode('');
+      
+      // Mark all operations as applied instead of clearing them
+      setOperationPreviews(prev => prev.map(p => ({ ...p, applied: true })));
       
       // Refresh project tree if callback provided
       if (onRefreshProject) {
@@ -324,6 +333,17 @@ const AIPanel: React.FC<AIPanelProps> = ({
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleSubmit();
     }
+  };
+
+  const handleClearContent = () => {
+    setGeneratedCode('');
+    setFileOperations([]);
+    setOperationPreviews([]);
+    setChangeDescription('');
+    setPlaceholderWarnings([]);
+    setExpandedOperations(new Set());
+    setApplySuccess(false);
+    setOperationsSuccess(false);
   };
 
   return (
@@ -412,6 +432,20 @@ const AIPanel: React.FC<AIPanelProps> = ({
                     </div>
                   )}
                   
+                  {changeDescription && (
+                    <div className="mb-4 p-3 bg-green-900 bg-opacity-20 border border-green-500 rounded">
+                      <div className="flex items-start space-x-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <Bot className="w-4 h-4 text-green-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-green-200 mb-1">What Changed:</h4>
+                          <p className="text-sm text-green-100 leading-relaxed">{changeDescription}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <h4 className="text-sm font-medium text-white mb-3">File Operations:</h4>
                   <div className="space-y-2 mb-3 flex-1 overflow-y-auto min-h-0">
                     {operationPreviews.map((preview, index) => (
@@ -464,13 +498,26 @@ const AIPanel: React.FC<AIPanelProps> = ({
                     ))}
                   </div>
                   <div className="mt-auto pt-3 border-t border-border-color">
-                    <button
-                      onClick={handleApplyAllOperations}
-                      className="w-full px-4 py-2 bg-roblox-green hover:bg-green-600 text-white text-sm rounded transition-colors"
-                      disabled={!onFileOperations || fileOperations.length === 0}
-                    >
-                      Apply All Operations
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleApplyAllOperations}
+                        className={`flex-1 px-4 py-2 text-white text-sm rounded transition-colors ${
+                          operationPreviews.every(p => p.applied) 
+                            ? 'bg-gray-600 cursor-not-allowed' 
+                            : 'bg-roblox-green hover:bg-green-600'
+                        }`}
+                        disabled={!onFileOperations || fileOperations.length === 0 || operationPreviews.every(p => p.applied)}
+                      >
+                        {operationPreviews.every(p => p.applied) ? 'All Applied ✓' : 'Apply All Operations'}
+                      </button>
+                      <button
+                        onClick={handleClearContent}
+                        className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded transition-colors"
+                        title="Clear all content"
+                      >
+                        Clear
+                      </button>
+                    </div>
                     {operationsSuccess && (
                       <div className="mt-2 text-green-400 text-xs text-center">✓ All operations applied successfully!</div>
                     )}
@@ -482,17 +529,26 @@ const AIPanel: React.FC<AIPanelProps> = ({
                     {generatedCode}
                   </pre>
                   <div className="mt-3 pt-3 border-t border-border-color">
-                    {selectedFile && (
+                    <div className="flex space-x-2">
+                      {selectedFile && (
+                        <button
+                          onClick={handleApply}
+                          className="px-4 py-2 bg-roblox-blue hover:bg-blue-600 text-white text-xs rounded transition-colors"
+                          disabled={!selectedFile}
+                        >
+                          Apply to file
+                        </button>
+                      )}
                       <button
-                        onClick={handleApply}
-                        className="px-4 py-2 bg-roblox-blue hover:bg-blue-600 text-white text-xs rounded transition-colors"
-                        disabled={!selectedFile}
+                        onClick={handleClearContent}
+                        className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                        title="Clear all content"
                       >
-                        Apply to file
+                        Clear
                       </button>
-                    )}
+                    </div>
                     {applySuccess && (
-                      <span className="ml-3 text-green-400 text-xs">Applied!</span>
+                      <div className="mt-2 text-green-400 text-xs">✓ Applied to file!</div>
                     )}
                   </div>
                 </div>

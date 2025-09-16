@@ -17,11 +17,13 @@ export type FileOperation =
 
 export interface FileOperationsResponse {
   operations: FileOperation[];
+  description?: string;
 }
 
 export interface AIResponse {
   content?: string;
   operations?: FileOperation[];
+  description?: string;
 }
 
 export interface CodeGenerationResult {
